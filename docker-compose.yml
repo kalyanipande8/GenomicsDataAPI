@@ -1,0 +1,40 @@
+# Default local path: SQLite, single API service.
+#   docker-compose up
+#
+# Production/AWS story (documented, NOT provisioned here — see README):
+#   Swap the `api` service's GENOMICS_DB_PATH / add a real DATABASE_URL env
+#   var pointing at an Amazon RDS Postgres instance. The optional `postgres`
+#   service below shows what a more production-like local stand-in for RDS
+#   looks like; the app's SQL layer would need a thin driver swap (sqlite3 ->
+#   psycopg2/SQLAlchemy engine URL) to point at it, no endpoint/business
+#   logic changes.
+
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "5050:5050"
+    environment:
+      - GENOMICS_DB_PATH=/app/data/genomics.db
+    volumes:
+      - ./data:/app/data
+
+  # Optional production-like local stand-in for Amazon RDS.
+  # Not wired up to the Flask app by default (app currently reads SQLite via
+  # GENOMICS_DB_PATH). Included to document the intended AWS deployment shape.
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=genomics
+      - POSTGRES_USER=genomics_user
+      - POSTGRES_PASSWORD=changeme_local_only
+    ports:
+      - "5432:5432"
+    volumes:
+      - genomics_pg_data:/var/lib/postgresql/data
+    profiles: ["postgres"]
+
+volumes:
+  genomics_pg_data:
